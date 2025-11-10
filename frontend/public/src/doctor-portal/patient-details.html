@@ -1,1 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Doctor • Patient Details • MediConnect</title>
+	<link rel="stylesheet" href="../css/styles.css" />
+	<script>window.API_BASE = 'http://localhost:4000';</script>
+</head>
+<body>
+	<header class="container toolbar">
+		<div>
+			<h2>Patient Details</h2>
+			<p class="muted">Lookup any patient by ID</p>
+		</div>
+		<nav class="stack" style="grid-auto-flow: column;">
+			<a class="btn secondary" href="./patients.html">Patients</a>
+			<a class="btn secondary" href="../../index.html">Home</a>
+		</nav>
+	</header>
+	<main class="container stack">
+		<div class="stack" style="grid-template-columns: 1fr auto;">
+			<input id="pid" placeholder="Patient ID" />
+			<button class="btn" id="load">Load</button>
+		</div>
+		<pre id="out" style="background:#0b1225;border:1px solid #1f2937;border-radius:10px;padding:16px;overflow:auto;"></pre>
+	</main>
+	<script src="../js/script.js"></script>
+	<script>
+		const out = document.getElementById('out');
+		document.getElementById('load').addEventListener('click', async () => {
+			try {
+				const id = document.getElementById('pid').value;
+				if (!id) return alert('Enter patient ID');
+				const data = await MC.api('/api/patients/' + id);
+				out.textContent = JSON.stringify(data, null, 2);
+			} catch (err) {
+				alert(err.message);
+			}
+		});
+	</script>
+</body>
+</html>
 

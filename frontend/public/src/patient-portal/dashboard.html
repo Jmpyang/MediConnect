@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Patient Dashboard • MediConnect</title>
+	<link rel="stylesheet" href="../css/styles.css" />
+	<script>window.API_BASE = 'http://localhost:4000';</script>
+</head>
+<body>
+	<header class="container toolbar">
+		<div>
+			<h2>Patient Dashboard</h2>
+			<p class="muted">Your upcoming appointments</p>
+		</div>
+		<nav class="stack" style="grid-auto-flow: column;">
+			<a class="btn secondary" href="./profile.html">Profile</a>
+			<a class="btn secondary" href="../../index.html">Home</a>
+		</nav>
+	</header>
+	<main class="container">
+		<section class="toolbar">
+			<form id="loginForm" class="stack" style="grid-template-columns: repeat(4, 1fr);">
+				<input name="email" placeholder="Email" required />
+				<input name="password" placeholder="Password" type="password" required />
+				<button class="btn" type="submit">Login</button>
+				<button class="btn secondary" id="logoutBtn" type="button">Logout</button>
+			</form>
+		</section>
+
+		<section class="stack" style="margin-top:16px;">
+			<div class="stack" style="grid-template-columns: repeat(4, 1fr);">
+				<input id="patientId" placeholder="Patient ID (auto after login)" />
+				<input id="doctorId" placeholder="Doctor ID" />
+				<input id="scheduledAt" type="datetime-local" />
+				<button class="btn" id="bookBtn">Book Appointment</button>
+			</div>
+			<table>
+				<thead>
+					<tr>
+						<th>When</th>
+						<th>Doctor</th>
+						<th>Status</th>
+						<th>Reason</th>
+					</tr>
+				</thead>
+				<tbody id="apptBody"></tbody>
+			</table>
+		</section>
+	</main>
+	<script src="../js/script.js"></script>
+	<script>
+		const apptBody = document.getElementById('apptBody');
+		const loginForm = document.getElementById('loginForm');
+		const logoutBtn = document.getElementById('logoutBtn');
+		const patientIdInput = document.getElementById('patientId');
+		const doctorIdInput = document.getElementById('doctorId');
+		const scheduledAtInput = document.getElementById('scheduledAt');
+		const bookBtn = document.getElementById('bookBtn');
+
+		function renderRows(items) {
+			apptBody.innerHTML = items.map(a => {
+				const when = new Date(a.scheduledAt).toLocaleString();
+				const doctor = a.doctor?.fullName || a.doctor?.email || a.doctor || '-';
+				return `<tr>
+					<td>${when}</td>
+					<td>${doctor}</td>
+					<td>${a.status}</td>
+					<td>${a.reason || ''}</td>
+				</tr>`;
+			}).join('');
+		}
+
+		async function loadAppointments() {
+			const patient = JSON.parse(localStorage.getItem('user') || '{}');
+			if (!patient?.id) return;
+			const data = await MC.api('/api/appointments?patient=' + patient.id);
+			renderRows(data);
+		}
+
+		loginForm.addEventListener('submit', async (e) => {
+			e.preventDefault();
+			const fd = new FormData(loginForm);
+			try {
+				const r = await MC.login(fd.get('email'), fd.get('password'));
+				if (r.role !== 'patient') alert('Note: logged in as ' + r.role);
+				patientIdInput.value = r.user.id;
+				await loadAppointments();
+			} catch (err) {
+				alert(err.message);
+			}
+		});
+
+		logoutBtn.addEventListener('click', () => {
+			localStorage.clear();
+			apptBody.innerHTML = '';
+			patientIdInput.value = '';
+		});
+
+		bookBtn.addEventListener('click', async () => {
+			try {
+				const body = {
+					patient: patientIdInput.value,
+					doctor: doctorIdInput.value,
+					scheduledAt: new Date(scheduledAtInput.value).toISOString()
+				};
+				await MC.api('/api/appointments', { method: 'POST', body: JSON.stringify(body) });
+				await loadAppointments();
+			} catch (err) {
+				alert(err.message);
+			}
+		});
+
+		// Pre-fill if already logged in
+		(() => {
+			const u = JSON.parse(localStorage.getItem('user') || '{}');
+			if (u?.id) patientIdInput.value = u.id;
+			loadAppointments();
+		})();
+	</script>
+</body>
+</html>
+

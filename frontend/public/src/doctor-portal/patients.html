@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Doctor • Patients • MediConnect</title>
+	<link rel="stylesheet" href="../css/styles.css" />
+	<script>window.API_BASE = 'http://localhost:4000';</script>
+</head>
+<body>
+	<header class="container toolbar">
+		<div>
+			<h2>Patients</h2>
+			<p class="muted">Browse and view details</p>
+		</div>
+		<nav class="stack" style="grid-auto-flow: column;">
+			<a class="btn secondary" href="./patient-details.html">Patient Details</a>
+			<a class="btn secondary" href="../../index.html">Home</a>
+		</nav>
+	</header>
+	<main class="container">
+		<section class="toolbar">
+			<form id="loginForm" class="stack" style="grid-template-columns: repeat(3, 1fr);">
+				<input name="email" placeholder="Doctor Email" required />
+				<input name="password" placeholder="Password" type="password" required />
+				<button class="btn" type="submit">Login</button>
+			</form>
+			<button class="btn secondary" id="loadBtn" type="button">Reload</button>
+		</section>
+		<table>
+			<thead>
+				<tr>
+					<th>Name</th>
+					<th>Email</th>
+					<th>Phone</th>
+				</tr>
+			</thead>
+			<tbody id="body"></tbody>
+		</table>
+	</main>
+	<script src="../js/script.js"></script>
+	<script>
+		const bodyEl = document.getElementById('body');
+		const loginForm = document.getElementById('loginForm');
+		const loadBtn = document.getElementById('loadBtn');
+
+		function renderRows(items) {
+			bodyEl.innerHTML = items.map(p => {
+				return `<tr>
+					<td>${p.fullName || (p.firstName + ' ' + p.lastName)}</td>
+					<td>${p.email}</td>
+					<td>${p.phone || ''}</td>
+				</tr>`;
+			}).join('');
+		}
+
+		async function loadPatients() {
+			const data = await MC.api('/api/patients');
+			renderRows(data);
+		}
+
+		loginForm.addEventListener('submit', async (e) => {
+			e.preventDefault();
+			const fd = new FormData(loginForm);
+			try {
+				const r = await MC.login(fd.get('email'), fd.get('password'));
+				if (r.role !== 'doctor') alert('Note: logged in as ' + r.role);
+				await loadPatients();
+			} catch (err) {
+				alert(err.message);
+			}
+		});
+
+		loadBtn.addEventListener('click', loadPatients);
+	</script>
+</body>
+</html>
+

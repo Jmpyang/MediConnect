@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Patient Profile • MediConnect</title>
+	<link rel="stylesheet" href="../css/styles.css" />
+	<script>window.API_BASE = 'http://localhost:4000';</script>
+</head>
+<body>
+	<header class="container toolbar">
+		<div>
+			<h2>Profile</h2>
+			<p class="muted">Update your details</p>
+		</div>
+		<nav class="stack" style="grid-auto-flow: column;">
+			<a class="btn secondary" href="./dashboard.html">Dashboard</a>
+			<a class="btn secondary" href="../../index.html">Home</a>
+		</nav>
+	</header>
+	<main class="container">
+		<form id="profileForm" class="stack" style="max-width: 520px;">
+			<input name="firstName" placeholder="First name" required />
+			<input name="lastName" placeholder="Last name" required />
+			<input name="phone" placeholder="Phone" />
+			<input name="address" placeholder="Address" />
+			<button class="btn" type="submit">Save</button>
+		</form>
+	</main>
+	<script src="../js/script.js"></script>
+	<script>
+		const form = document.getElementById('profileForm');
+		const user = JSON.parse(localStorage.getItem('user') || '{}');
+		if (!user?.id) {
+			alert('Please log in from dashboard first.');
+		} else {
+			form.firstName.value = user.firstName || '';
+			form.lastName.value = user.lastName || '';
+			form.phone.value = user.phone || '';
+			form.address.value = user.address || '';
+		}
+		form.addEventListener('submit', async (e) => {
+			e.preventDefault();
+			try {
+				const body = Object.fromEntries(new FormData(form).entries());
+				const updated = await MC.api('/api/patients/' + user.id, {
+					method: 'PUT',
+					body: JSON.stringify(body)
+				});
+				localStorage.setItem('user', JSON.stringify(updated));
+				alert('Saved');
+			} catch (err) {
+				alert(err.message);
+			}
+		});
+	</script>
+</body>
+</html>
+
