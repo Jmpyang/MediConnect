@@ -8,7 +8,7 @@ async function connectToDatabase() {
     return mongoose.connection;
   }
 
-  const mongoUri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/mediconnect';
+  const mongoUri = process.env.MONGODB_URI || 'mongodb+srv://joshua:Gyz2Rv2xsLAmV1yf@mediconnectcluster.5wortwl.mongodb.net/?appName=mediconnectcluster';
 
   mongoose.set('strictQuery', true);
 

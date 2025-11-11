@@ -46,6 +46,17 @@ async function registerPatient(form) {
 window.MC = {
 	api,
 	login,
-	registerPatient
+	registerPatient,
+	async registerDoctor(form) {
+		const body = Object.fromEntries(new FormData(form).entries());
+		// POST to /api/doctors to create the doctor account
+		const doctor = await api('/api/doctors', {
+			method: 'POST',
+			body: JSON.stringify(body)
+		});
+		// Then login to obtain token for future requests
+		const auth = await login(body.email, body.password);
+		return { doctor, ...auth };
+	}
 };
 

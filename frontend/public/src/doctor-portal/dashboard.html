@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Doctor Dashboard • MediConnect</title>
+	<link rel="stylesheet" href="../css/styles.css" />
+	<script>window.API_BASE = 'http://localhost:4000';</script>
+</head>
+<body>
+	<header class="container toolbar">
+		<div>
+			<h2>Doctor Dashboard</h2>
+			<p class="muted">Overview, alerts, and upcoming appointments</p>
+		</div>
+		<nav class="stack" style="grid-auto-flow: column;">
+			<a class="btn secondary" href="./patients.html">Patients</a>
+			<a class="btn secondary" href="../../index.html" data-confirm-exit="Return to Home? You will leave the doctor portal.">Home</a>
+		</nav>
+	</header>
+	<main class="container">
+		<section class="toolbar">
+			<form id="loginForm" class="stack" style="grid-template-columns: repeat(3, 1fr);">
+				<input name="email" placeholder="Doctor Email" required />
+				<input name="password" placeholder="Password" type="password" required />
+				<button class="btn" type="submit">Login</button>
+			</form>
+		</section>
+
+		<section class="stack" style="margin-top:16px;">
+			<div class="card" style="padding:16px;">
+				<h3>Clinical insights</h3>
+				<div id="insights" class="stack"></div>
+			</div>
+			<div class="stack" style="grid-template-columns: 2fr 1fr;">
+				<div class="card" style="padding:16px;">
+					<h3>Upcoming appointments</h3>
+					<table>
+						<thead><tr><th>When</th><th>Patient</th><th>Status</th></tr></thead>
+						<tbody id="apptBody"></tbody>
+					</table>
+				</div>
+				<div class="card" style="padding:16px;">
+					<h3>Patients at a glance</h3>
+					<div id="patientsMini" class="stack"></div>
+				</div>
+			</div>
+		</section>
+	</main>
+	<script src="../js/script.js"></script>
+	<script>
+		const loginForm = document.getElementById('loginForm');
+		const apptBody = document.getElementById('apptBody');
+		const insights = document.getElementById('insights');
+		const patientsMini = document.getElementById('patientsMini');
+
+		function renderAppointments(items) {
+			apptBody.innerHTML = items.map(a => {
+				const when = new Date(a.scheduledAt).toLocaleString();
+				const patient = a.patient?.fullName || a.patient?.email || a.patient || '-';
+				return `<tr><td>${when}</td><td>${patient}</td><td>${a.status}</td></tr>`;
+			}).slice(0, 10).join('') || '<tr><td colspan="3" class="muted">None</td></tr>';
+		}
+
+		function renderInsights() {
+			// Demo logic: flagging out-of-range recent glucose from local patient histories if accessible on this device
+			const hist = JSON.parse(localStorage.getItem('mc_glucose_history') || '[]').slice(-6);
+			const abnormal = hist.filter(h => h.value < 70 || h.value > 180);
+			const last = hist[hist.length - 1];
+			insights.innerHTML = `
+				<p>${last ? 'Latest glucose: <b>' + last.value + ' mg/dL</b> at ' + new Date(last.at).toLocaleString() : 'No patient glucose records on this device'}</p>
+				<p>${abnormal.length ? '<span style="color:#fca5a5;">' + abnormal.length + ' abnormal readings in last ' + hist.length + ' entries</span>' : 'No abnormal readings detected in recent entries'}</p>
+				<p class="muted" style="font-size:12px;">In production, this section aggregates from your database and devices.</p>
+			`;
+		}
+
+		function renderPatientsMini(list) {
+			patientsMini.innerHTML = list.map(p => {
+				return `<div style="display:flex;justify-content:space-between;border:1px solid var(--border);border-radius:10px;padding:10px;">
+					<span>${p.fullName || (p.firstName + ' ' + p.lastName)}</span>
+					<a class="link" href="./patient-details.html" title="Open details">Details</a>
+				</div>`;
+			}).slice(0, 6).join('') || '<p class="muted">No patients loaded.</p>';
+		}
+
+		async function loadDoctorsAppointments(doctorId) {
+			const items = await MC.api('/api/appointments?doctor=' + doctorId);
+			renderAppointments(items);
+		}
+
+		async function loadPatients() {
+			const items = await MC.api('/api/patients');
+			renderPatientsMini(items);
+		}
+
+		loginForm.addEventListener('submit', async (e) => {
+			e.preventDefault();
+			const fd = new FormData(loginForm);
+			try {
+				const r = await MC.login(fd.get('email'), fd.get('password'));
+				if (r.role !== 'doctor') alert('Note: logged in as ' + r.role);
+				await loadDoctorsAppointments(r.user.id);
+				await loadPatients();
+				renderInsights();
+			} catch (err) {
+				alert(err.message);
+			}
+		});
+		// Confirm before leaving portal
+		document.querySelectorAll('a[data-confirm-exit]').forEach(a => {
+			a.addEventListener('click', (e) => {
+				if (!confirm(a.getAttribute('data-confirm-exit') || 'Leave this page?')) {
+					e.preventDefault();
+				}
+			});
+		});
+	</script>
+</body>
+</html>
+

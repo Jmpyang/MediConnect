@@ -8,7 +8,8 @@ const registerValidation = [
   body('firstName').isString().trim().notEmpty(),
   body('lastName').isString().trim().notEmpty(),
   body('email').isEmail().normalizeEmail(),
-  body('password').isLength({ min: 6 })
+  body('password').isLength({ min: 6 }),
+  body('gender').optional().isIn(['male', 'female', 'other'])
 ];
 
 async function registerPatient(req, res, next) {
@@ -26,6 +27,7 @@ async function registerPatient(req, res, next) {
       lastName: req.body.lastName,
       email: req.body.email,
       phone: req.body.phone || '',
+      gender: req.body.gender || 'other',
       passwordHash
     });
 

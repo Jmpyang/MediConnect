@@ -15,7 +15,7 @@
 		</div>
 		<nav class="stack" style="grid-auto-flow: column;">
 			<a class="btn secondary" href="./dashboard.html">Dashboard</a>
-			<a class="btn secondary" href="../../index.html">Home</a>
+			<a class="btn secondary" href="../../index.html" data-confirm-exit="Return to Home? You will leave the patient portal.">Home</a>
 		</nav>
 	</header>
 	<main class="container">
@@ -52,6 +52,14 @@
 			} catch (err) {
 				alert(err.message);
 			}
+		});
+		// Confirm before leaving portal
+		document.querySelectorAll('a[data-confirm-exit]').forEach(a => {
+			a.addEventListener('click', (e) => {
+				if (!confirm(a.getAttribute('data-confirm-exit') || 'Leave this page?')) {
+					e.preventDefault();
+				}
+			});
 		});
 	</script>
 </body>

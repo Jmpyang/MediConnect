@@ -3,30 +3,171 @@
 <head>
 	<meta charset="UTF-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-	<title>MediConnect</title>
+	<title>MediConnect • Sign In</title>
 	<link rel="stylesheet" href="./src/css/styles.css" />
-</head>
-<body>
-	<header class="container">
-		<h1>MediConnect</h1>
-		<p class="muted">Simple healthcare management demo</p>
-	</header>
-	<main class="container">
-		<section class="card-grid">
-			<a class="card" href="./src/patient-portal/dashboard.html">
-				<h2>Patient Portal</h2>
-				<p>View appointments, update profile, and more.</p>
-			</a>
-			<a class="card" href="./src/doctor-portal/patients.html">
-				<h2>Doctor Portal</h2>
-				<p>Browse patients and manage appointments.</p>
-			</a>
-		</section>
-	</main>
-	<footer class="container footer">
-		<span>© <span id="year"></span> MediConnect</span>
-	</footer>
+	<script>window.API_BASE = 'http://localhost:4000';</script>
+	<style>
+		/* page-specific tweaks to match the reference look */
+		.page {
+			display: grid;
+			place-items: center;
+			min-height: 100vh;
+		}
+		.auth-card {
+			max-width: 560px;
+			width: 100%;
+			background: var(--panel);
+			border: 1px solid var(--border);
+			border-radius: 14px;
+			padding: 24px;
+			box-shadow: 0 10px 30px rgba(0,0,0,.25);
+		}
+		.brand {
+			display: grid;
+			place-items: center;
+			gap: 10px;
+			margin-bottom: 8px;
+			text-align: center;
+		}
+		.brand img {
+			width: 140px;
+			height: 140px;
+			object-fit: contain;
+			border-radius: 100%;
+			background: #0b1225;
+			border: 1px solid var(--border);
+		}
+		.title {
+			font-size: 32px;
+			font-weight: 800;
+			color: #78a9ff;
+			margin: 8px 0 0;
+		}
+		.subtitle { color: var(--muted); margin: 0 0 18px; }
+		.auth-form label { font-size: 14px; color: var(--muted); display: block; margin: 12px 0 6px; }
+		.input-icon {
+			position: relative;
+		}
+		.input-icon button {
+			position: absolute;
+			right: 8px;
+			top: 50%;
+			transform: translateY(-50%);
+			background: transparent;
+			border: 0;
+			color: var(--muted);
+			cursor: pointer;
+		}
+		.row {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 10px;
+			margin: 8px 0 16px;
+			color: var(--muted);
+			font-size: 14px;
+		}
+		.link { color: #76b3ff; text-decoration: none; }
+		.link:hover { text-decoration: underline; }
+		.center { text-align: center; }
+	</style>
+	<!-- Simple inline SVG fallback logo -->
+	<svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+		<symbol id="mediconnect-logo" viewBox="0 0 120 120">
+			<circle cx="60" cy="60" r="58" fill="#0b1225" stroke="#1f2937" stroke-width="4"/>
+			<g fill="#22c55e">
+				<rect x="54" y="20" width="12" height="80" rx="6"/>
+				<rect x="20" y="54" width="80" height="12" rx="6"/>
+			</g>
+		</symbol>
+	</svg>
 	<script src="./src/js/script.js"></script>
+	<script>
+		// Page behavior: handle login, remember me, show/hide password
+		document.addEventListener('DOMContentLoaded', () => {
+			const form = document.getElementById('loginForm');
+			const email = document.getElementById('email');
+			const password = document.getElementById('password');
+			const remember = document.getElementById('remember');
+			const toggle = document.getElementById('togglePassword');
+			const roleSel = document.getElementById('loginRole');
+
+			// preload remembered username
+			const remembered = localStorage.getItem('remember_email');
+			if (remembered) {
+				email.value = remembered;
+				remember.checked = true;
+			}
+
+			toggle.addEventListener('click', () => {
+				const t = password.getAttribute('type') === 'password' ? 'text' : 'password';
+				password.setAttribute('type', t);
+				toggle.textContent = t === 'password' ? '👁' : '🙈';
+			});
+
+			form.addEventListener('submit', async (e) => {
+				e.preventDefault();
+				try {
+					if (remember.checked) localStorage.setItem('remember_email', email.value);
+					else localStorage.removeItem('remember_email');
+					const r = await MC.login(email.value, password.value);
+					// redirect according to user's selected portal
+					const target = (roleSel && roleSel.value) || r.role;
+					if (target === 'doctor') {
+						location.href = './src/doctor-portal/patients.html';
+					} else {
+						location.href = './src/patient-portal/dashboard.html';
+					}
+				} catch (err) {
+					alert(err.message || 'Login failed');
+				}
+			});
+		});
+	</script>
+	</head>
+<body>
+	<div class="page">
+		<div>
+			<div class="brand">
+				<!-- If you have a logo file, replace the SVG with: <img src="./logo.png" alt="Logo" /> -->
+				<svg width="140" height="140"><use href="#mediconnect-logo" /></svg>
+				<h1 class="title">Hi, welcome back</h1>
+				<p class="subtitle">Please fill in your details to log in</p>
+			</div>
+			<div class="auth-card">
+				<form id="loginForm" class="auth-form">
+					<label for="loginRole">Login as</label>
+					<select id="loginRole">
+						<option value="patient">Patient</option>
+						<option value="doctor">Doctor</option>
+					</select>
+
+					<label for="email">Username</label>
+					<input id="email" name="email" placeholder="you@example.com" required />
+
+					<label for="password">Password</label>
+					<div class="input-icon">
+						<input id="password" name="password" type="password" placeholder="••••••••" required />
+						<button type="button" id="togglePassword" aria-label="Toggle password">👁</button>
+					</div>
+
+					<div class="row">
+						<label style="display:flex;align-items:center;gap:8px;">
+							<input id="remember" type="checkbox" /> Remember me
+						</label>
+						<a class="link" href="#" onclick="alert('Feature coming soon');return false;">Forgot Password?</a>
+					</div>
+
+					<button class="btn" type="submit" style="width:100%;">Sign In</button>
+				</form>
+				<p class="center" style="margin-top:16px;">
+					<span class="muted">Don’t have an account?</span>
+					<a class="link" href="./src/auth/register.html">Sign Up</a>
+				</p>
+			</div>
+			<p class="center muted" style="margin-top:16px;">Copyright © <span id="year"></span> – MediConnect</p>
+		</div>
+	</div>
 </body>
 </html>
 

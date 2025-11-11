@@ -11,11 +11,11 @@
 	<header class="container toolbar">
 		<div>
 			<h2>Patient Dashboard</h2>
-			<p class="muted">Your upcoming appointments</p>
+			<p class="muted">Your health overview</p>
 		</div>
 		<nav class="stack" style="grid-auto-flow: column;">
 			<a class="btn secondary" href="./profile.html">Profile</a>
-			<a class="btn secondary" href="../../index.html">Home</a>
+			<a class="btn secondary" href="../../index.html" data-confirm-exit="Return to Home? You will be logged out.">Home</a>
 		</nav>
 	</header>
 	<main class="container">
@@ -29,23 +29,66 @@
 		</section>
 
 		<section class="stack" style="margin-top:16px;">
-			<div class="stack" style="grid-template-columns: repeat(4, 1fr);">
-				<input id="patientId" placeholder="Patient ID (auto after login)" />
-				<input id="doctorId" placeholder="Doctor ID" />
-				<input id="scheduledAt" type="datetime-local" />
-				<button class="btn" id="bookBtn">Book Appointment</button>
+			<div class="card" style="padding:16px;">
+				<h3>My Sugars</h3>
+				<div class="stack" style="grid-template-columns: repeat(2, 1fr);">
+					<div class="card" style="padding:16px;">
+						<h4>Quick questions</h4>
+						<label>Did you have a meal recently?</label>
+						<select id="qMeal">
+							<option value="">Select</option>
+							<option value="yes">Yes</option>
+							<option value="no">No</option>
+						</select>
+						<label style="margin-top:8px;">When was your last meal?</label>
+						<input id="qLastMeal" type="datetime-local" />
+						<button class="btn" id="saveQs" style="margin-top:10px;">Save</button>
+					</div>
+					<div class="card" style="padding:16px;">
+						<h4>Tests</h4>
+						<label>Choose test</label>
+						<select id="testType">
+							<option value="glucose">Glucose</option>
+							<option value="vitals">Vitals</option>
+						</select>
+						<div id="testInputs" class="stack" style="margin-top:8px;">
+							<input id="glucoseVal" type="number" placeholder="Glucose (mg/dL)" />
+						</div>
+						<button class="btn" id="addTest" style="margin-top:8px;">Add to history</button>
+					</div>
+				</div>
+				<div class="stack" style="margin-top:12px; grid-template-columns: 2fr 1fr;">
+					<div class="card" style="padding:16px;">
+						<h4>History</h4>
+						<div id="historyChart" class="stack"></div>
+					</div>
+					<div class="card" style="padding:16px;">
+						<h4>IoT Vitals</h4>
+						<div id="vitalsBox" class="stack"></div>
+					</div>
+				</div>
 			</div>
-			<table>
-				<thead>
-					<tr>
-						<th>When</th>
-						<th>Doctor</th>
-						<th>Status</th>
-						<th>Reason</th>
-					</tr>
-				</thead>
-				<tbody id="apptBody"></tbody>
-			</table>
+
+			<div class="card" style="padding:16px;">
+				<h3>Appointments</h3>
+				<div class="stack" style="grid-template-columns: repeat(4, 1fr);">
+					<input id="patientId" placeholder="Patient ID (auto after login)" />
+					<input id="doctorId" placeholder="Doctor ID" />
+					<input id="scheduledAt" type="datetime-local" />
+					<button class="btn" id="bookBtn">Book Appointment</button>
+				</div>
+				<table style="margin-top:10px;">
+					<thead>
+						<tr>
+							<th>When</th>
+							<th>Doctor</th>
+							<th>Status</th>
+							<th>Actions</th>
+						</tr>
+					</thead>
+					<tbody id="apptBody"></tbody>
+				</table>
+			</div>
 		</section>
 	</main>
 	<script src="../js/script.js"></script>
@@ -57,6 +100,15 @@
 		const doctorIdInput = document.getElementById('doctorId');
 		const scheduledAtInput = document.getElementById('scheduledAt');
 		const bookBtn = document.getElementById('bookBtn');
+		// My Sugars
+		const qMeal = document.getElementById('qMeal');
+		const qLastMeal = document.getElementById('qLastMeal');
+		const saveQs = document.getElementById('saveQs');
+		const testType = document.getElementById('testType');
+		const testInputs = document.getElementById('testInputs');
+		const addTest = document.getElementById('addTest');
+		const vitalsBox = document.getElementById('vitalsBox');
+		const historyChart = document.getElementById('historyChart');
 
 		function renderRows(items) {
 			apptBody.innerHTML = items.map(a => {
@@ -66,7 +118,10 @@
 					<td>${when}</td>
 					<td>${doctor}</td>
 					<td>${a.status}</td>
-					<td>${a.reason || ''}</td>
+					<td>
+						<button class="btn secondary" data-action="reschedule" data-id="${a.id}">Reschedule</button>
+						<button class="btn secondary" data-action="cancel" data-id="${a.id}">Cancel</button>
+					</td>
 				</tr>`;
 			}).join('');
 		}
@@ -78,6 +133,83 @@
 			renderRows(data);
 		}
 
+		function colorForGlucose(v) {
+			if (v < 70 || v > 180) return 'red';
+			if ((v >= 70 && v < 90) || (v > 140 && v <= 180)) return 'yellow';
+			return 'green';
+		}
+
+		function renderHistory() {
+			const hist = JSON.parse(localStorage.getItem('mc_glucose_history') || '[]');
+			historyChart.innerHTML = hist.slice(-12).map(h => {
+				const c = colorForGlucose(h.value);
+				return `<div style="display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:center;">
+					<span class="muted" style="font-size:12px;">${new Date(h.at).toLocaleString()}</span>
+					<div style="height:8px;background:#0b1225;border-radius:6px;overflow:hidden;">
+						<div style="width:${Math.min(100, h.value/2)}%;height:8px;background:${c};"></div>
+					</div>
+				</div>`;
+			}).join('') || '<p class="muted">No history yet.</p>';
+		}
+
+		function randomVitals() {
+			return {
+				bpm: 60 + Math.floor(Math.random()*40),
+				temp: (36 + Math.random()*1.5).toFixed(1),
+				spo2: 95 + Math.floor(Math.random()*5)
+			};
+		}
+
+		function renderVitals() {
+			const v = randomVitals();
+			function badge(val, okRange) {
+				const good = okRange(val);
+				const color = good ? 'green' : (typeof val === 'number' && (val < 60 || val > 120) ? 'red' : 'yellow');
+				return `<span style="padding:2px 6px;border-radius:999px;background:${color};color:#08100a;font-weight:700;">${val}</span>`;
+			}
+			vitalsBox.innerHTML = `
+				<div style="display:flex;justify-content:space-between;">
+					<div>BPM ${badge(v.bpm, x => x>=60 && x<=100)}</div>
+					<div>Temp ${badge(parseFloat(v.temp), x => x>=36 && x<=37.5)} °C</div>
+					<div>SpO₂ ${badge(v.spo2, x => x>=95)} %</div>
+				</div>
+				<p class="muted" style="font-size:12px;">Sample IoT feed. Values refresh each visit.</p>
+			`;
+		}
+
+		testType.addEventListener('change', () => {
+			if (testType.value === 'glucose') {
+				testInputs.innerHTML = '<input id="glucoseVal" type="number" placeholder="Glucose (mg/dL)" />';
+			} else {
+				testInputs.innerHTML = `
+					<input id="bpmVal" type="number" placeholder="BPM" />
+					<input id="tempVal" type="number" step="0.1" placeholder="Temperature (°C)" />
+					<input id="spo2Val" type="number" placeholder="SpO₂ (%)" />
+				`;
+			}
+		});
+
+		addTest.addEventListener('click', () => {
+			if (testType.value === 'glucose') {
+				const g = parseFloat(document.getElementById('glucoseVal').value);
+				if (isNaN(g)) return alert('Enter glucose value');
+				const hist = JSON.parse(localStorage.getItem('mc_glucose_history') || '[]');
+				hist.push({ value: g, at: new Date().toISOString() });
+				localStorage.setItem('mc_glucose_history', JSON.stringify(hist));
+				renderHistory();
+			} else {
+				const bpm = parseFloat(document.getElementById('bpmVal').value);
+				const temp = parseFloat(document.getElementById('tempVal').value);
+				const spo2 = parseFloat(document.getElementById('spo2Val').value);
+				alert('Vitals recorded (demo): ' + JSON.stringify({ bpm, temp, spo2 }));
+			}
+		});
+
+		saveQs.addEventListener('click', () => {
+			const data = { meal: qMeal.value, lastMeal: qLastMeal.value };
+			localStorage.setItem('mc_meal', JSON.stringify(data));
+			alert('Saved');
+		});
 		loginForm.addEventListener('submit', async (e) => {
 			e.preventDefault();
 			const fd = new FormData(loginForm);
@@ -86,6 +218,8 @@
 				if (r.role !== 'patient') alert('Note: logged in as ' + r.role);
 				patientIdInput.value = r.user.id;
 				await loadAppointments();
+				renderVitals();
+				renderHistory();
 			} catch (err) {
 				alert(err.message);
 			}
@@ -111,12 +245,46 @@
 			}
 		});
 
+		apptBody.addEventListener('click', async (e) => {
+			const btn = e.target.closest('button[data-action]');
+			if (!btn) return;
+			const id = btn.getAttribute('data-id');
+			const action = btn.getAttribute('data-action');
+			try {
+				if (action === 'cancel') {
+					if (!confirm('Cancel this appointment?')) return;
+					await MC.api('/api/appointments/' + id, { method: 'DELETE' });
+				} else if (action === 'reschedule') {
+					const dt = prompt('Enter new date/time (YYYY-MM-DD HH:mm)', '');
+					if (!dt) return;
+					const iso = new Date(dt).toISOString();
+					await MC.api('/api/appointments/' + id, { method: 'PUT', body: JSON.stringify({ scheduledAt: iso, status: 'scheduled' }) });
+				}
+				await loadAppointments();
+			} catch (err) {
+				alert(err.message);
+			}
+		});
+
 		// Pre-fill if already logged in
 		(() => {
 			const u = JSON.parse(localStorage.getItem('user') || '{}');
 			if (u?.id) patientIdInput.value = u.id;
 			loadAppointments();
+			renderVitals();
+			renderHistory();
+			const mq = JSON.parse(localStorage.getItem('mc_meal') || '{}');
+			if (mq.meal) qMeal.value = mq.meal;
+			if (mq.lastMeal) qLastMeal.value = mq.lastMeal;
 		})();
+		// Confirm before leaving portal
+		document.querySelectorAll('a[data-confirm-exit]').forEach(a => {
+			a.addEventListener('click', (e) => {
+				if (!confirm(a.getAttribute('data-confirm-exit') || 'Leave this page?')) {
+					e.preventDefault();
+				}
+			});
+		});
 	</script>
 </body>
 </html>

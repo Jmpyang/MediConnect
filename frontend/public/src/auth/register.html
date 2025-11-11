@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Register • MediConnect</title>
+	<link rel="stylesheet" href="../css/styles.css" />
+	<script>window.API_BASE = 'http://localhost:4000';</script>
+</head>
+<body>
+	<header class="container toolbar">
+		<div>
+			<h2>Create an account</h2>
+			<p class="muted">Register as a patient or a doctor</p>
+		</div>
+		<nav class="stack" style="grid-auto-flow: column;">
+			<a class="btn secondary" href="../../index.html">Home</a>
+		</nav>
+	</header>
+	<main class="container">
+		<div class="stack" style="max-width:680px;">
+			<div class="toolbar">
+				<label>
+					<select id="role">
+						<option value="patient">Patient</option>
+						<option value="doctor">Doctor</option>
+					</select>
+				</label>
+			</div>
+			<form id="form" class="stack">
+				<div class="stack" style="grid-template-columns: repeat(2, 1fr);">
+					<input name="firstName" placeholder="First name" required />
+					<input name="lastName" placeholder="Last name" required />
+				</div>
+				<label>Gender</label>
+				<select name="gender">
+					<option value="">Prefer not to say</option>
+					<option value="male">Male</option>
+					<option value="female">Female</option>
+					<option value="other">Other</option>
+				</select>
+				<input name="email" type="email" placeholder="Email" required />
+				<input name="password" type="password" placeholder="Password (min 6)" minlength="6" required />
+				<input name="phone" placeholder="Phone" />
+				<input name="address" placeholder="Address (patients)" />
+				<input name="specialty" id="specialty" placeholder="Specialty (doctors)" />
+				<button class="btn" type="submit">Create account</button>
+				<p class="muted">After registering, you can log in from the portal pages.</p>
+			</form>
+		</div>
+	</main>
+	<script src="../js/script.js"></script>
+	<script>
+		const roleSel = document.getElementById('role');
+		const form = document.getElementById('form');
+		const specialtyInput = document.getElementById('specialty');
+
+		function updateRoleFields() {
+			const role = roleSel.value;
+			if (role === 'doctor') {
+				specialtyInput.style.display = '';
+				specialtyInput.required = true;
+			} else {
+				specialtyInput.style.display = 'none';
+				specialtyInput.required = false;
+			}
+		}
+		roleSel.addEventListener('change', updateRoleFields);
+		updateRoleFields();
+
+		form.addEventListener('submit', async (e) => {
+			e.preventDefault();
+			try {
+				const role = roleSel.value;
+				if (role === 'patient') {
+					const { user } = await MC.registerPatient(form);
+					alert('Patient registered. You are logged in.');
+					location.href = '../patient-portal/dashboard.html';
+				} else {
+					const { doctor } = await MC.registerDoctor(form);
+					alert('Doctor registered. You are logged in.');
+					location.href = '../doctor-portal/patients.html';
+				}
+			} catch (err) {
+				alert(err.message);
+			}
+		});
+	</script>
+</body>
+</html>
+
